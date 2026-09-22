@@ -5,6 +5,9 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from resume_parser import extract_text_from_pdf
+from ai_service import analyze_resume
+from schemas import ResumeAnalysis
+from pydantic import BaseModel
 
 BASE_DIR = Path(__file__).resolve().parent
 MAX_FILE_SIZE_MB = 5
@@ -24,6 +27,11 @@ def upload_page():
     return FileResponse(BASE_DIR / "templates" / "upload.html")
 
 
+@app.get("/analysis")
+def analysis_page():
+    return FileResponse(BASE_DIR / "templates" / "analysis.html")
+
+
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
@@ -31,14 +39,11 @@ def health_check():
 
 @app.post("/upload-resume")
 async def upload_resume(file: UploadFile = File(...)):
-    # 1. Validate file type by extension and content-type
     if file.content_type != "application/pdf":
         raise HTTPException(status_code=400, detail="Only PDF files are allowed.")
 
-    # 2. Read the file into memory
     file_bytes = await file.read()
 
-    # 3. Validate file size
     size_mb = len(file_bytes) / (1024 * 1024)
     if size_mb > MAX_FILE_SIZE_MB:
         raise HTTPException(
@@ -49,7 +54,6 @@ async def upload_resume(file: UploadFile = File(...)):
     if size_mb == 0:
         raise HTTPException(status_code=400, detail="The uploaded file is empty.")
 
-    # 4. Extract text, turning parser errors into clean HTTP errors
     try:
         resume_text = extract_text_from_pdf(file_bytes)
     except ValueError as e:
@@ -59,3 +63,21 @@ async def upload_resume(file: UploadFile = File(...)):
         "message": "Resume uploaded successfully",
         "resume_text": resume_text,
     }
+
+
+class AnalyzeRequest(BaseModel):
+    """What the client must send us to analyze a resume."""
+    resume_text: str
+
+
+@app.post("/analyze-resume", response_model=ResumeAnalysis)
+def analyze_resume_endpoint(payload: AnalyzeRequest):
+    if not payload.resume_text or not payload.resume_text.strip():
+        raise HTTPException(status_code=400, detail="Resume text is missing or empty.")
+
+    try:
+        result = analyze_resume(payload.resume_text)
+    except ValueError as e:
+        raise HTTPException(status_code=502, detail=str(e))
+
+    return result

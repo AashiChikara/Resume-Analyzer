@@ -140,3 +140,18 @@ body {
   overflow-y: auto;
   font-family: inherit;
 }
+.result-box ul {
+  margin-left: 20px;
+  margin-top: 8px;
+}
+
+.result-box {
+  margin-bottom: 16px;
+}
+
+textarea {
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-family: inherit;
+}

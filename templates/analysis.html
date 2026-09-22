@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resume Analysis</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+  <header class="navbar">
+    <div class="container">
+      <span class="brand">Resume Analyzer</span>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="upload-section">
+      <h1>Resume Analysis</h1>
+      <p>Paste your extracted resume text below (or come from the Upload page) and analyze it.</p>
+
+      <textarea id="resume-text" rows="10" style="width:100%; margin-bottom:16px;" placeholder="Paste resume text here..."></textarea>
+      <button id="analyze-btn" class="btn">Analyze</button>
+
+      <div id="status" style="margin-top:16px;"></div>
+
+      <div id="result" style="display:none; margin-top:24px;">
+        <div class="result-box"><h3>Skills</h3><ul id="skills"></ul></div>
+        <div class="result-box"><h3>Education</h3><ul id="education"></ul></div>
+        <div class="result-box"><h3>Projects</h3><ul id="projects"></ul></div>
+        <div class="result-box"><h3>Certifications</h3><ul id="certifications"></ul></div>
+        <div class="result-box"><h3>Experience</h3><ul id="experience"></ul></div>
+        <div class="result-box"><h3>Strengths</h3><ul id="strengths"></ul></div>
+        <div class="result-box"><h3>Weaknesses</h3><ul id="weaknesses"></ul></div>
+        <div class="result-box"><h3>Missing Sections</h3><ul id="missing_sections"></ul></div>
+        <div class="result-box"><h3>Suggestions</h3><ul id="suggestions"></ul></div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const btn = document.getElementById("analyze-btn");
+    const statusEl = document.getElementById("status");
+    const resultEl = document.getElementById("result");
+
+    const fieldIds = [
+      "skills", "education", "projects", "certifications",
+      "experience", "strengths", "weaknesses",
+      "missing_sections", "suggestions"
+    ];
+
+    btn.addEventListener("click", async function () {
+      const resumeText = document.getElementById("resume-text").value.trim();
+
+      if (!resumeText) {
+        statusEl.textContent = "Please paste resume text first.";
+        return;
+      }
+
+      statusEl.textContent = "Analyzing... this can take a few seconds.";
+      resultEl.style.display = "none";
+
+      try {
+        const response = await fetch("/analyze-resume", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ resume_text: resumeText })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          statusEl.textContent = "Error: " + data.detail;
+          return;
+        }
+
+        fieldIds.forEach(id => {
+          const list = document.getElementById(id);
+          list.innerHTML = "";
+          const items = data[id] || [];
+          if (items.length === 0) {
+            list.innerHTML = "<li>None found</li>";
+          } else {
+            items.forEach(item => {
+              const li = document.createElement("li");
+              li.textContent = item;
+              list.appendChild(li);
+            });
+          }
+        });
+
+        statusEl.textContent = "Analysis complete.";
+        resultEl.style.display = "block";
+
+      } catch (err) {
+        statusEl.textContent = "Something went wrong. Is the server running?";
+      }
+    });
+  </script>
+
+</body>
+</html>
