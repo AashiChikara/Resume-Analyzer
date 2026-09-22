@@ -100,3 +100,43 @@ body {
   border-top: 1px solid var(--border);
   font-size: 0.9rem;
 }
+.upload-section {
+  padding: 48px 0;
+  max-width: 600px;
+}
+
+.upload-section h1 {
+  margin-bottom: 8px;
+}
+
+.upload-section p {
+  color: var(--muted);
+  margin-bottom: 24px;
+}
+
+#upload-form {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+#status {
+  margin-bottom: 16px;
+  color: var(--muted);
+}
+
+.result-box {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.result-box pre {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  max-height: 400px;
+  overflow-y: auto;
+  font-family: inherit;
+}

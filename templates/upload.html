@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Upload Resume</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+  <header class="navbar">
+    <div class="container">
+      <span class="brand">Resume Analyzer</span>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="upload-section">
+      <h1>Upload Your Resume</h1>
+      <p>Choose a PDF file to extract its text.</p>
+
+      <form id="upload-form">
+        <input type="file" id="resume-file" accept="application/pdf" required>
+        <button type="submit" class="btn">Upload</button>
+      </form>
+
+      <div id="status"></div>
+
+      <div id="result" class="result-box" style="display:none;">
+        <h3>Extracted Text</h3>
+        <pre id="resume-text-output"></pre>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const form = document.getElementById("upload-form");
+    const statusEl = document.getElementById("status");
+    const resultEl = document.getElementById("result");
+    const outputEl = document.getElementById("resume-text-output");
+
+    form.addEventListener("submit", async function (e) {
+      e.preventDefault();
+
+      const fileInput = document.getElementById("resume-file");
+      const file = fileInput.files[0];
+
+      if (!file) {
+        statusEl.textContent = "Please choose a file first.";
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      statusEl.textContent = "Uploading...";
+      resultEl.style.display = "none";
+
+      try {
+        const response = await fetch("/upload-resume", {
+          method: "POST",
+          body: formData
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          statusEl.textContent = "Error: " + data.detail;
+          return;
+        }
+
+        statusEl.textContent = data.message;
+        outputEl.textContent = data.resume_text;
+        resultEl.style.display = "block";
+
+      } catch (err) {
+        statusEl.textContent = "Something went wrong. Is the server running?";
+      }
+    });
+  </script>
+
+</body>
+</html>
