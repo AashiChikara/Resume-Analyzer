@@ -37,6 +37,34 @@
         <div class="result-box"><h3>Missing Sections</h3><ul id="missing_sections"></ul></div>
         <div class="result-box"><h3>Suggestions</h3><ul id="suggestions"></ul></div>
       </div>
+      <hr style="margin: 32px 0;">
+
+      <h2>Improve a Piece of Your Resume</h2>
+      <p>Paste one bullet point, your summary, or a project description to get a stronger rewrite.</p>
+
+      <label>Section Type</label>
+      <select id="section-type" style="margin-bottom:16px; padding:8px;">
+        <option value="summary">Summary</option>
+        <option value="project">Project Description</option>
+        <option value="skills">Skills Section</option>
+        <option value="experience">Experience Bullet Point</option>
+      </select>
+
+      <label>Original Text</label>
+      <textarea id="original-text" rows="3" style="width:100%; margin-bottom:16px;" placeholder="e.g. Made a food waste project using Python."></textarea>
+
+      <label>Additional Context (optional — real facts/metrics you want included)</label>
+      <textarea id="additional-context" rows="2" style="width:100%; margin-bottom:16px;" placeholder="e.g. Used by 50 people in a college hostel"></textarea>
+
+      <button id="improve-btn" class="btn">Improve This Text</button>
+
+      <div id="improve-status" style="margin-top:16px;"></div>
+
+      <div id="improve-result" class="result-box" style="display:none; margin-top:16px;">
+        <h3>Improved Version</h3>
+        <p id="improved-text-output"></p>
+        <p style="color: var(--muted); font-size: 0.9rem;" id="improve-note"></p>
+      </div>
     </section>
   </main>
 
@@ -98,6 +126,50 @@
 
         statusEl.textContent = "Analysis complete.";
         resultEl.style.display = "block";
+
+      } catch (err) {
+        statusEl.textContent = "Something went wrong. Is the server running?";
+      }
+    });
+  </script>
+  <script>
+    document.getElementById("improve-btn").addEventListener("click", async function () {
+      const sectionType = document.getElementById("section-type").value;
+      const originalText = document.getElementById("original-text").value.trim();
+      const additionalContext = document.getElementById("additional-context").value.trim();
+      const statusEl = document.getElementById("improve-status");
+      const resultEl = document.getElementById("improve-result");
+
+      if (!originalText) {
+        statusEl.textContent = "Please paste some text first.";
+        return;
+      }
+
+      statusEl.textContent = "Improving...";
+      resultEl.style.display = "none";
+
+      try {
+        const response = await fetch("/improve-resume", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            section_type: sectionType,
+            original_text: originalText,
+            additional_context: additionalContext || null
+          })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          statusEl.textContent = "Error: " + data.detail;
+          return;
+        }
+
+        document.getElementById("improved-text-output").textContent = data.improved_text;
+        document.getElementById("improve-note").textContent = data.note;
+        resultEl.style.display = "block";
+        statusEl.textContent = "Done.";
 
       } catch (err) {
         statusEl.textContent = "Something went wrong. Is the server running?";

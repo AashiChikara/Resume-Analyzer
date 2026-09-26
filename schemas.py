@@ -35,3 +35,30 @@ class MatchResult(BaseModel):
     missing_skills: list[str] = Field(default_factory=list)
     matching_keywords: list[str] = Field(default_factory=list)
     missing_keywords: list[str] = Field(default_factory=list)
+
+class ResumeScore(BaseModel):
+    """
+    An explainable score: every factor is shown individually so the number
+    isn't a mysterious black box.
+    """
+    overall_score: float
+    skill_match: float
+    keyword_match: float
+    semantic_match: float
+    section_completeness: float
+    note: str = (
+        "This is an estimated score for guidance only. "
+        "It is not the score used by any specific company's ATS."
+    )
+
+
+class ImprovementRequest(BaseModel):
+    section_type: str  # "summary", "project", "skills", or "experience"
+    original_text: str
+    additional_context: str | None = None  # e.g. real metrics the user wants included
+
+
+class ImprovementResult(BaseModel):
+    original_text: str
+    improved_text: str
+    note: str = "Review this suggestion — do not include any detail that isn't true for you."

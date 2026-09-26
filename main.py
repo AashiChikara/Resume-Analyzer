@@ -11,6 +11,9 @@ from schemas import ResumeAnalysis, JobDescriptionAnalysis, MatchResult
 from matching_service import calculate_match
 from database import init_db
 from models import save_resume, save_analysis, save_job_match, get_history
+from ai_service import analyze_resume, analyze_job_description, improve_resume_text
+from schemas import ResumeAnalysis, JobDescriptionAnalysis, MatchResult, ResumeScore, ImprovementRequest, ImprovementResult
+from matching_service import calculate_match, calculate_resume_score
 
 BASE_DIR = Path(__file__).resolve().parent
 MAX_FILE_SIZE_MB = 5
@@ -179,6 +182,76 @@ def match_resume_endpoint(payload: MatchRequest):
                 status_code=500,
                 detail=f"Match succeeded but saving to database failed: {e}",
             )
+
+    return result
+
+class ResumeScoreRequest(BaseModel):
+    resume_text: str
+    job_description: str
+    resume_id: int | None = None
+
+
+@app.post("/resume-score", response_model=ResumeScore)
+def resume_score_endpoint(payload: ResumeScoreRequest):
+    if not payload.resume_text.strip():
+        raise HTTPException(status_code=400, detail="Resume text is missing.")
+    if not payload.job_description.strip():
+        raise HTTPException(status_code=400, detail="Job description is missing.")
+
+    try:
+        resume_analysis = analyze_resume(payload.resume_text)
+        jd_analysis = analyze_job_description(payload.job_description)
+    except ValueError as e:
+        raise HTTPException(status_code=502, detail=str(e))
+
+    match_result = calculate_match(
+        resume_text=payload.resume_text,
+        job_description=payload.job_description,
+        resume_skills=resume_analysis.skills,
+        required_skills=jd_analysis.required_skills,
+        job_keywords=jd_analysis.keywords,
+    )
+
+    score = calculate_resume_score(match_result, resume_analysis)
+
+    if payload.resume_id is not None:
+        try:
+            save_analysis(
+                resume_id=payload.resume_id,
+                strengths=resume_analysis.strengths,
+                weaknesses=resume_analysis.weaknesses,
+                suggestions=resume_analysis.suggestions,
+                score=score.overall_score,
+            )
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Score calculated but saving to database failed: {e}",
+            )
+
+    return score
+
+
+@app.post("/improve-resume", response_model=ImprovementResult)
+def improve_resume_endpoint(payload: ImprovementRequest):
+    if not payload.original_text.strip():
+        raise HTTPException(status_code=400, detail="Original text is missing.")
+
+    valid_types = {"summary", "project", "skills", "experience"}
+    if payload.section_type.lower() not in valid_types:
+        raise HTTPException(
+            status_code=400,
+            detail=f"section_type must be one of: {', '.join(valid_types)}",
+        )
+
+    try:
+        result = improve_resume_text(
+            section_type=payload.section_type,
+            original_text=payload.original_text,
+            additional_context=payload.additional_context,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=502, detail=str(e))
 
     return result
 

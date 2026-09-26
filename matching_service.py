@@ -1,6 +1,6 @@
 from sentence_transformers import SentenceTransformer, util
 
-from schemas import MatchResult
+from schemas import MatchResult, ResumeScore
 
 # Loaded once when the app starts, not on every request — this is a fairly
 # large model file, so loading it per-request would be very slow.
@@ -90,4 +90,68 @@ def calculate_match(
         missing_skills=missing_skills,
         matching_keywords=matching_keywords,
         missing_keywords=missing_keywords,
+    )
+    from schemas import ResumeScore, MatchResult
+from schemas import ResumeAnalysis
+
+# The standard sections we expect a complete resume to have.
+STANDARD_SECTIONS = ["skills", "education", "experience", "projects", "certifications"]
+
+
+def calculate_section_completeness(missing_sections: list[str]) -> float:
+    """
+    Score based on how many standard sections are missing from the resume.
+    100% means nothing standard is missing.
+    """
+    if not missing_sections:
+        return 100.0
+
+    # Only count it against completeness if it's actually one of our standard sections
+    relevant_missing = [
+        s for s in missing_sections
+        if s.strip().lower() in STANDARD_SECTIONS
+    ]
+
+    total = len(STANDARD_SECTIONS)
+    missing_count = min(len(relevant_missing), total)
+    completeness = (total - missing_count) / total * 100
+    return round(completeness, 2)
+
+
+def _coverage_percent(matching: list[str], missing: list[str]) -> float:
+    """What percentage of a required list the resume actually covers."""
+    total = len(matching) + len(missing)
+    if total == 0:
+        return 100.0  # nothing was required, so nothing is missing
+    return round(len(matching) / total * 100, 2)
+
+
+def calculate_resume_score(
+    match_result: MatchResult,
+    resume_analysis: ResumeAnalysis,
+) -> ResumeScore:
+    """
+    Combine four independent, explainable factors into one overall score.
+    Each factor is weighted equally (25%) — a simple, easy-to-defend choice
+    rather than a tuned/opaque weighting scheme.
+    """
+    skill_match = _coverage_percent(match_result.matching_skills, match_result.missing_skills)
+    keyword_match = _coverage_percent(match_result.matching_keywords, match_result.missing_keywords)
+    semantic_match = match_result.semantic_similarity
+    section_completeness = calculate_section_completeness(resume_analysis.missing_sections)
+
+    overall = round(
+        (skill_match * 0.25)
+        + (keyword_match * 0.25)
+        + (semantic_match * 0.25)
+        + (section_completeness * 0.25),
+        2,
+    )
+
+    return ResumeScore(
+        overall_score=overall,
+        skill_match=skill_match,
+        keyword_match=keyword_match,
+        semantic_match=semantic_match,
+        section_completeness=section_completeness,
     )

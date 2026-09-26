@@ -28,6 +28,7 @@
       <textarea id="job-description" rows="8" style="width:100%; margin-bottom:16px;" placeholder="Paste job description here..."></textarea>
 
       <button id="match-btn" class="btn">Match</button>
+      <button id="score-btn" class="btn" style="margin-left:8px;">Get Resume Score</button>
 
       <div id="status" style="margin-top:16px;"></div>
 
@@ -38,6 +39,14 @@
           <p style="color: var(--muted); font-size: 0.9rem;">
             This is an estimated score for guidance only — not the score used by any company's actual ATS.
           </p>
+        </div>
+          <div class="result-box" id="score-box" style="display:none;">
+          <h3>Explainable Resume Score</h3>
+          <p><strong>Overall: <span id="overall-score"></span>/100</strong></p>
+          <p>Skill Match: <span id="skill-match"></span>%</p>
+          <p>Keyword Match: <span id="keyword-match"></span>%</p>
+          <p>Semantic Match: <span id="score-semantic"></span>%</p>
+          <p>Section Completeness: <span id="section-completeness"></span>%</p>
         </div>
         <div class="result-box"><h3>Matching Skills</h3><ul id="matching-skills"></ul></div>
         <div class="result-box"><h3>Missing Skills</h3><ul id="missing-skills"></ul></div>
@@ -107,6 +116,48 @@
 
         statusEl.textContent = "Done.";
         resultEl.style.display = "block";
+
+      } catch (err) {
+        statusEl.textContent = "Something went wrong. Is the server running?";
+      }
+    });
+      document.getElementById("score-btn").addEventListener("click", async function () {
+      const resumeText = document.getElementById("resume-text").value.trim();
+      const jobDescription = document.getElementById("job-description").value.trim();
+
+      if (!resumeText || !jobDescription) {
+        statusEl.textContent = "Please fill in both fields.";
+        return;
+      }
+
+      statusEl.textContent = "Calculating score... this may take 10-20 seconds.";
+
+      try {
+        const response = await fetch("/resume-score", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            resume_text: resumeText,
+            job_description: jobDescription
+          })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          statusEl.textContent = "Error: " + data.detail;
+          return;
+        }
+
+        document.getElementById("overall-score").textContent = data.overall_score;
+        document.getElementById("skill-match").textContent = data.skill_match;
+        document.getElementById("keyword-match").textContent = data.keyword_match;
+        document.getElementById("score-semantic").textContent = data.semantic_match;
+        document.getElementById("section-completeness").textContent = data.section_completeness;
+
+        document.getElementById("score-box").style.display = "block";
+        resultEl.style.display = "block";
+        statusEl.textContent = "Score calculated.";
 
       } catch (err) {
         statusEl.textContent = "Something went wrong. Is the server running?";

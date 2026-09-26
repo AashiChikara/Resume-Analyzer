@@ -162,3 +162,61 @@ def analyze_job_description(job_description: str) -> JobDescriptionAnalysis:
         raise ValueError(f"The LLM's response didn't match the expected structure: {e}")
 
     return analysis
+
+from schemas import ImprovementResult
+
+IMPROVE_PROMPT = """
+You are helping someone improve a piece of their resume. Rewrite the text below
+to sound clearer, more professional, and more action-oriented.
+
+CRITICAL RULES:
+- Do NOT invent numbers, percentages, metrics, or achievements that are not
+  already present in the original text or in the additional context provided.
+- Only reword and strengthen what is already true. Use stronger action verbs
+  and clearer structure, but do not fabricate outcomes.
+- If additional context is provided below, you may incorporate those specific
+  facts, since the user confirmed they are true.
+
+Section type: {section_type}
+
+Original text:
+\"\"\"
+{original_text}
+\"\"\"
+
+Additional context (facts the user confirmed are true, may be empty):
+\"\"\"
+{additional_context}
+\"\"\"
+
+Return ONLY the improved text. No explanation, no quotes, no markdown.
+"""
+
+
+def improve_resume_text(section_type: str, original_text: str,
+                         additional_context: str | None = None) -> ImprovementResult:
+    """
+    Ask Gemini to rewrite a piece of resume text without inventing facts.
+    """
+    prompt = IMPROVE_PROMPT.format(
+        section_type=section_type,
+        original_text=original_text,
+        additional_context=additional_context or "None provided.",
+    )
+
+    try:
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=prompt,
+        )
+    except Exception as e:
+        raise ValueError(f"LLM API call failed: {e}")
+
+    improved = (response.text or "").strip()
+    if not improved:
+        raise ValueError("The LLM returned an empty response.")
+
+    return ImprovementResult(
+        original_text=original_text,
+        improved_text=improved,
+    )
