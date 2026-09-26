@@ -4,7 +4,27 @@ import os
 from dotenv import load_dotenv
 from google import genai
 
-from schemas import ResumeAnalysis
+from schemas import ResumeAnalysis, JobDescriptionAnalysis
+import hashlib
+
+# Simple in-memory caches: same resume text or job description won't be
+# sent to the LLM twice. Keyed by a hash of the text so long inputs don't
+# bloat the cache key itself.
+_resume_analysis_cache: dict[str, ResumeAnalysis] = {}
+_jd_analysis_cache: dict[str, JobDescriptionAnalysis] = {}
+_CACHE_MAX_SIZE = 100  # prevents unbounded memory growth
+
+
+def _hash_text(text: str) -> str:
+    return hashlib.sha256(text.strip().encode("utf-8")).hexdigest()
+
+
+def _store_in_cache(cache: dict, key: str, value) -> None:
+    if len(cache) >= _CACHE_MAX_SIZE:
+        # Evict the oldest entry (dicts keep insertion order in Python 3.7+)
+        oldest_key = next(iter(cache))
+        cache.pop(oldest_key)
+    cache[key] = value
 
 load_dotenv()  # reads variables from .env into the environment
 
@@ -67,10 +87,10 @@ def _extract_json(raw_text: str) -> str:
 
 
 def analyze_resume(resume_text: str) -> ResumeAnalysis:
-    """
-    Send resume text to Gemini and return a validated ResumeAnalysis object.
-    Raises ValueError with a clear message if anything goes wrong.
-    """
+    cache_key = _hash_text(resume_text)
+    if cache_key in _resume_analysis_cache:
+        return _resume_analysis_cache[cache_key]
+
     prompt = ANALYSIS_PROMPT.format(resume_text=resume_text)
 
     try:
@@ -97,6 +117,7 @@ def analyze_resume(resume_text: str) -> ResumeAnalysis:
     except Exception as e:
         raise ValueError(f"The LLM's response didn't match the expected structure: {e}")
 
+    _store_in_cache(_resume_analysis_cache, cache_key, analysis)
     return analysis
 
 from schemas import JobDescriptionAnalysis
@@ -131,10 +152,10 @@ Job description:
 
 
 def analyze_job_description(job_description: str) -> JobDescriptionAnalysis:
-    """
-    Send job description text to Gemini and return a validated
-    JobDescriptionAnalysis object. Raises ValueError on any failure.
-    """
+    cache_key = _hash_text(job_description)
+    if cache_key in _jd_analysis_cache:
+        return _jd_analysis_cache[cache_key]
+
     prompt = JD_PROMPT.format(job_description=job_description)
 
     try:
@@ -161,6 +182,7 @@ def analyze_job_description(job_description: str) -> JobDescriptionAnalysis:
     except Exception as e:
         raise ValueError(f"The LLM's response didn't match the expected structure: {e}")
 
+    _store_in_cache(_jd_analysis_cache, cache_key, analysis)
     return analysis
 
 from schemas import ImprovementResult

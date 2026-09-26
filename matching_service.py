@@ -5,6 +5,30 @@ from schemas import MatchResult, ResumeScore
 # Loaded once when the app starts, not on every request — this is a fairly
 # large model file, so loading it per-request would be very slow.
 model = SentenceTransformer("all-MiniLM-L6-v2")
+import hashlib
+
+_embedding_cache: dict[str, any] = {}
+_EMBEDDING_CACHE_MAX_SIZE = 200
+
+
+def _hash_text(text: str) -> str:
+    return hashlib.sha256(text.strip().encode("utf-8")).hexdigest()
+
+
+def _get_embedding(text: str):
+    """Return a cached embedding for this text, computing it only once."""
+    cache_key = _hash_text(text)
+    if cache_key in _embedding_cache:
+        return _embedding_cache[cache_key]
+
+    embedding = model.encode(text)
+
+    if len(_embedding_cache) >= _EMBEDDING_CACHE_MAX_SIZE:
+        oldest_key = next(iter(_embedding_cache))
+        _embedding_cache.pop(oldest_key)
+    _embedding_cache[cache_key] = embedding
+
+    return embedding
 
 
 def calculate_semantic_similarity(resume_text: str, job_description: str) -> float:
@@ -13,13 +37,12 @@ def calculate_semantic_similarity(resume_text: str, job_description: str) -> flo
     meaning) and measure how similar those vectors are.
     Returns a percentage from 0 to 100.
     """
-    embeddings = model.encode([resume_text, job_description])
-    similarity = util.cos_sim(embeddings[0], embeddings[1]).item()
+    embedding_1 = _get_embedding(resume_text)
+    embedding_2 = _get_embedding(job_description)
 
-    # cosine similarity ranges roughly -1 to 1; clamp and convert to 0-100
+    similarity = util.cos_sim(embedding_1, embedding_2).item()
     similarity = max(0.0, min(1.0, similarity))
     return round(similarity * 100, 2)
-
 
 def _normalize(items: list[str]) -> set[str]:
     """Lowercase and strip so 'Python' and 'python ' are treated as the same."""
