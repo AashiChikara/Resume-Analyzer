@@ -33,7 +33,7 @@
     </section>
   </main>
 
-  <script>
+    <script>
     const form = document.getElementById("upload-form");
     const statusEl = document.getElementById("status");
     const resultEl = document.getElementById("result");
@@ -69,7 +69,9 @@
           return;
         }
 
-        statusEl.textContent = data.message;
+        statusEl.innerHTML =
+          data.message + " — <strong>Resume ID: " + data.resume_id +
+          "</strong> (copy this to link your analysis/match to this resume)";
         outputEl.textContent = data.resume_text;
         resultEl.style.display = "block";
 

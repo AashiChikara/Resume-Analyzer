@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>History</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+  <header class="navbar">
+    <div class="container">
+      <span class="brand">Resume Analyzer</span>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="upload-section" style="max-width: 800px;">
+      <h1>Analysis History</h1>
+      <div id="history-list"></div>
+    </section>
+  </main>
+
+  <script>
+    async function loadHistory() {
+      const listEl = document.getElementById("history-list");
+      listEl.innerHTML = "Loading...";
+
+      try {
+        const response = await fetch("/history-data");
+        const data = await response.json();
+
+        if (!response.ok) {
+          listEl.textContent = "Error: " + data.detail;
+          return;
+        }
+
+        if (data.length === 0) {
+          listEl.innerHTML = "<p>No resumes analyzed yet.</p>";
+          return;
+        }
+
+        listEl.innerHTML = "";
+        data.forEach(item => {
+          const box = document.createElement("div");
+          box.className = "result-box";
+          box.innerHTML = `
+            <h3>${item.filename || "Untitled resume"} (ID: ${item.resume_id})</h3>
+            <p style="color: var(--muted); font-size: 0.9rem;">${item.created_at || ""}</p>
+            <p><strong>Match Score:</strong> ${item.match_score !== null ? item.match_score + "%" : "Not matched yet"}</p>
+            <p><strong>Missing Skills:</strong> ${(item.missing_skills || []).join(", ") || "None"}</p>
+            <p><strong>Suggestions:</strong> ${(item.suggestions || []).join(", ") || "None"}</p>
+          `;
+          listEl.appendChild(box);
+        });
+
+      } catch (err) {
+        listEl.textContent = "Something went wrong. Is the server running?";
+      }
+    }
+
+    loadHistory();
+  </script>
+
+</body>
+</html>

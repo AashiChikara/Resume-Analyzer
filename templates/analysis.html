@@ -18,6 +18,8 @@
     <section class="upload-section">
       <h1>Resume Analysis</h1>
       <p>Paste your extracted resume text below (or come from the Upload page) and analyze it.</p>
+      <label>Resume ID (optional — paste from Upload page to save this analysis)</label>
+      <input type="number" id="resume-id" style="margin-bottom:16px; padding:8px;" placeholder="e.g. 3">
 
       <textarea id="resume-text" rows="10" style="width:100%; margin-bottom:16px;" placeholder="Paste resume text here..."></textarea>
       <button id="analyze-btn" class="btn">Analyze</button>
@@ -61,10 +63,15 @@
       resultEl.style.display = "none";
 
       try {
+        const resumeIdValue = document.getElementById("resume-id").value;
+
         const response = await fetch("/analyze-resume", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ resume_text: resumeText })
+          body: JSON.stringify({
+            resume_text: resumeText,
+            resume_id: resumeIdValue ? parseInt(resumeIdValue) : null
+          })
         });
 
         const data = await response.json();

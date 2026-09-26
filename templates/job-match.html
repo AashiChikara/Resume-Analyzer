@@ -18,6 +18,8 @@
     <section class="upload-section">
       <h1>Match Resume to Job Description</h1>
       <p>Paste your resume text and a job description to see how well they match.</p>
+      <label>Resume ID (optional — paste from Upload page to save this match)</label>
+      <input type="number" id="resume-id" style="margin-bottom:16px; padding:8px;" placeholder="e.g. 3">
 
       <label>Resume Text</label>
       <textarea id="resume-text" rows="8" style="width:100%; margin-bottom:16px;" placeholder="Paste resume text here..."></textarea>
@@ -77,12 +79,15 @@
       resultEl.style.display = "none";
 
       try {
+        const resumeIdValue = document.getElementById("resume-id").value;
+
         const response = await fetch("/match-resume", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             resume_text: resumeText,
-            job_description: jobDescription
+            job_description: jobDescription,
+            resume_id: resumeIdValue ? parseInt(resumeIdValue) : null
           })
         });
 
