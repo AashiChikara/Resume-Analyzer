@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Job Match</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+  <header class="navbar">
+    <div class="container">
+      <span class="brand">Resume Analyzer</span>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="upload-section">
+      <h1>Match Resume to Job Description</h1>
+      <p>Paste your resume text and a job description to see how well they match.</p>
+
+      <label>Resume Text</label>
+      <textarea id="resume-text" rows="8" style="width:100%; margin-bottom:16px;" placeholder="Paste resume text here..."></textarea>
+
+      <label>Job Description</label>
+      <textarea id="job-description" rows="8" style="width:100%; margin-bottom:16px;" placeholder="Paste job description here..."></textarea>
+
+      <button id="match-btn" class="btn">Match</button>
+
+      <div id="status" style="margin-top:16px;"></div>
+
+      <div id="result" style="display:none; margin-top:24px;">
+        <div class="result-box">
+          <h3>Match Score: <span id="match-score"></span>%</h3>
+          <p>Semantic Similarity: <span id="semantic-score"></span>%</p>
+          <p style="color: var(--muted); font-size: 0.9rem;">
+            This is an estimated score for guidance only — not the score used by any company's actual ATS.
+          </p>
+        </div>
+        <div class="result-box"><h3>Matching Skills</h3><ul id="matching-skills"></ul></div>
+        <div class="result-box"><h3>Missing Skills</h3><ul id="missing-skills"></ul></div>
+        <div class="result-box"><h3>Matching Keywords</h3><ul id="matching-keywords"></ul></div>
+        <div class="result-box"><h3>Missing Keywords</h3><ul id="missing-keywords"></ul></div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const btn = document.getElementById("match-btn");
+    const statusEl = document.getElementById("status");
+    const resultEl = document.getElementById("result");
+
+    function fillList(id, items) {
+      const list = document.getElementById(id);
+      list.innerHTML = "";
+      if (!items || items.length === 0) {
+        list.innerHTML = "<li>None</li>";
+        return;
+      }
+      items.forEach(item => {
+        const li = document.createElement("li");
+        li.textContent = item;
+        list.appendChild(li);
+      });
+    }
+
+    btn.addEventListener("click", async function () {
+      const resumeText = document.getElementById("resume-text").value.trim();
+      const jobDescription = document.getElementById("job-description").value.trim();
+
+      if (!resumeText || !jobDescription) {
+        statusEl.textContent = "Please fill in both fields.";
+        return;
+      }
+
+      statusEl.textContent = "Analyzing... this may take 10-20 seconds.";
+      resultEl.style.display = "none";
+
+      try {
+        const response = await fetch("/match-resume", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            resume_text: resumeText,
+            job_description: jobDescription
+          })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          statusEl.textContent = "Error: " + data.detail;
+          return;
+        }
+
+        document.getElementById("match-score").textContent = data.match_score;
+        document.getElementById("semantic-score").textContent = data.semantic_similarity;
+        fillList("matching-skills", data.matching_skills);
+        fillList("missing-skills", data.missing_skills);
+        fillList("matching-keywords", data.matching_keywords);
+        fillList("missing-keywords", data.missing_keywords);
+
+        statusEl.textContent = "Done.";
+        resultEl.style.display = "block";
+
+      } catch (err) {
+        statusEl.textContent = "Something went wrong. Is the server running?";
+      }
+    });
+  </script>
+
+</body>
+</html>

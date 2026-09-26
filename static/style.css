@@ -155,3 +155,8 @@ textarea {
   border-radius: 8px;
   font-family: inherit;
 }
+label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 6px;
+}

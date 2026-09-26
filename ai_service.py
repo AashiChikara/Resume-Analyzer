@@ -98,3 +98,67 @@ def analyze_resume(resume_text: str) -> ResumeAnalysis:
         raise ValueError(f"The LLM's response didn't match the expected structure: {e}")
 
     return analysis
+
+from schemas import JobDescriptionAnalysis
+
+JD_PROMPT = """
+You are an assistant that extracts structured information from a job description.
+Only extract what is actually written. Do not invent requirements.
+
+Return ONLY a valid JSON object with exactly these keys, nothing else
+(no markdown, no code fences, no explanation):
+
+{{
+  "required_skills": [],
+  "technologies": [],
+  "keywords": [],
+  "responsibilities": [],
+  "qualifications": []
+}}
+
+Rules:
+- "required_skills": specific skills explicitly required (e.g. "Python", "communication").
+- "technologies": tools, frameworks, platforms mentioned (e.g. "FastAPI", "AWS").
+- "keywords": important terms a resume should ideally contain to match this job (e.g. "REST API", "CI/CD").
+- "responsibilities": key duties described in the posting.
+- "qualifications": education, years of experience, certifications required.
+
+Job description:
+\"\"\"
+{job_description}
+\"\"\"
+"""
+
+
+def analyze_job_description(job_description: str) -> JobDescriptionAnalysis:
+    """
+    Send job description text to Gemini and return a validated
+    JobDescriptionAnalysis object. Raises ValueError on any failure.
+    """
+    prompt = JD_PROMPT.format(job_description=job_description)
+
+    try:
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=prompt,
+        )
+    except Exception as e:
+        raise ValueError(f"LLM API call failed: {e}")
+
+    raw_text = response.text
+    if not raw_text:
+        raise ValueError("The LLM returned an empty response.")
+
+    cleaned = _extract_json(raw_text)
+
+    try:
+        data = json.loads(cleaned)
+    except json.JSONDecodeError:
+        raise ValueError("The LLM did not return valid JSON.")
+
+    try:
+        analysis = JobDescriptionAnalysis(**data)
+    except Exception as e:
+        raise ValueError(f"The LLM's response didn't match the expected structure: {e}")
+
+    return analysis
