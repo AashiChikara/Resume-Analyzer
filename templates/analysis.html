@@ -8,9 +8,16 @@
 </head>
 <body>
 
-  <header class="navbar">
-    <div class="container">
+    <header class="navbar">
+    <div class="container navbar-inner">
       <span class="brand">Resume Analyzer</span>
+      <nav>
+        <a href="/">Home</a>
+        <a href="/upload">Upload</a>
+        <a href="/analysis">Analyze</a>
+        <a href="/job-match">Job Match</a>
+        <a href="/history">History</a>
+      </nav>
     </div>
   </header>
 
@@ -87,7 +94,8 @@
         return;
       }
 
-      statusEl.textContent = "Analyzing... this can take a few seconds.";
+      btn.disabled = true;
+      statusEl.innerHTML = '<span class="spinner"></span> Analyzing... this can take a few seconds.';
       resultEl.style.display = "none";
 
       try {
@@ -113,6 +121,7 @@
           const list = document.getElementById(id);
           list.innerHTML = "";
           const items = data[id] || [];
+
           if (items.length === 0) {
             list.innerHTML = "<li>None found</li>";
           } else {
@@ -129,11 +138,15 @@
 
       } catch (err) {
         statusEl.textContent = "Something went wrong. Is the server running?";
+      } finally {
+        btn.disabled = false;
       }
     });
-  </script>
-  <script>
+</script>
+
+<script>
     document.getElementById("improve-btn").addEventListener("click", async function () {
+      const improveBtn = document.getElementById("improve-btn");
       const sectionType = document.getElementById("section-type").value;
       const originalText = document.getElementById("original-text").value.trim();
       const additionalContext = document.getElementById("additional-context").value.trim();
@@ -145,7 +158,8 @@
         return;
       }
 
-      statusEl.textContent = "Improving...";
+      improveBtn.disabled = true;
+      statusEl.innerHTML = '<span class="spinner"></span> Improving...';
       resultEl.style.display = "none";
 
       try {
@@ -173,9 +187,11 @@
 
       } catch (err) {
         statusEl.textContent = "Something went wrong. Is the server running?";
+      } finally {
+        improveBtn.disabled = false;
       }
     });
-  </script>
+</script>
 
 </body>
 </html>

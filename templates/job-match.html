@@ -8,9 +8,16 @@
 </head>
 <body>
 
-  <header class="navbar">
-    <div class="container">
+    <header class="navbar">
+    <div class="container navbar-inner">
       <span class="brand">Resume Analyzer</span>
+      <nav>
+        <a href="/">Home</a>
+        <a href="/upload">Upload</a>
+        <a href="/analysis">Analyze</a>
+        <a href="/job-match">Job Match</a>
+        <a href="/history">History</a>
+      </nav>
     </div>
   </header>
 
@@ -58,16 +65,19 @@
 
   <script>
     const btn = document.getElementById("match-btn");
+    const scoreBtn = document.getElementById("score-btn");
     const statusEl = document.getElementById("status");
     const resultEl = document.getElementById("result");
 
     function fillList(id, items) {
       const list = document.getElementById(id);
       list.innerHTML = "";
+
       if (!items || items.length === 0) {
         list.innerHTML = "<li>None</li>";
         return;
       }
+
       items.forEach(item => {
         const li = document.createElement("li");
         li.textContent = item;
@@ -84,7 +94,9 @@
         return;
       }
 
-      statusEl.textContent = "Analyzing... this may take 10-20 seconds.";
+      btn.disabled = true;
+      statusEl.innerHTML =
+        '<span class="spinner"></span> Analyzing... this may take 10-20 seconds.';
       resultEl.style.display = "none";
 
       try {
@@ -109,6 +121,7 @@
 
         document.getElementById("match-score").textContent = data.match_score;
         document.getElementById("semantic-score").textContent = data.semantic_similarity;
+
         fillList("matching-skills", data.matching_skills);
         fillList("missing-skills", data.missing_skills);
         fillList("matching-keywords", data.matching_keywords);
@@ -119,9 +132,13 @@
 
       } catch (err) {
         statusEl.textContent = "Something went wrong. Is the server running?";
+      } finally {
+        btn.disabled = false;
       }
     });
-      document.getElementById("score-btn").addEventListener("click", async function () {
+
+
+    scoreBtn.addEventListener("click", async function () {
       const resumeText = document.getElementById("resume-text").value.trim();
       const jobDescription = document.getElementById("job-description").value.trim();
 
@@ -130,15 +147,20 @@
         return;
       }
 
-      statusEl.textContent = "Calculating score... this may take 10-20 seconds.";
+      scoreBtn.disabled = true;
+      statusEl.innerHTML =
+        '<span class="spinner"></span> Calculating score... this may take 10-20 seconds.';
 
       try {
+        const resumeIdValue = document.getElementById("resume-id").value;
+
         const response = await fetch("/resume-score", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             resume_text: resumeText,
-            job_description: jobDescription
+            job_description: jobDescription,
+            resume_id: resumeIdValue ? parseInt(resumeIdValue) : null
           })
         });
 
@@ -153,17 +175,21 @@
         document.getElementById("skill-match").textContent = data.skill_match;
         document.getElementById("keyword-match").textContent = data.keyword_match;
         document.getElementById("score-semantic").textContent = data.semantic_match;
-        document.getElementById("section-completeness").textContent = data.section_completeness;
+        document.getElementById("section-completeness").textContent =
+          data.section_completeness;
 
         document.getElementById("score-box").style.display = "block";
         resultEl.style.display = "block";
+
         statusEl.textContent = "Score calculated.";
 
       } catch (err) {
         statusEl.textContent = "Something went wrong. Is the server running?";
+      } finally {
+        scoreBtn.disabled = false;
       }
     });
-  </script>
+</script>
 
 </body>
 </html>

@@ -8,9 +8,16 @@
 </head>
 <body>
 
-  <header class="navbar">
-    <div class="container">
+    <header class="navbar">
+    <div class="container navbar-inner">
       <span class="brand">Resume Analyzer</span>
+      <nav>
+        <a href="/">Home</a>
+        <a href="/upload">Upload</a>
+        <a href="/analysis">Analyze</a>
+        <a href="/job-match">Job Match</a>
+        <a href="/history">History</a>
+      </nav>
     </div>
   </header>
 
@@ -44,6 +51,7 @@
 
       const fileInput = document.getElementById("resume-file");
       const file = fileInput.files[0];
+      const submitBtn = form.querySelector("button[type=submit]");
 
       if (!file) {
         statusEl.textContent = "Please choose a file first.";
@@ -53,7 +61,8 @@
       const formData = new FormData();
       formData.append("file", file);
 
-      statusEl.textContent = "Uploading...";
+      submitBtn.disabled = true;
+      statusEl.innerHTML = '<span class="spinner"></span> Uploading...';
       resultEl.style.display = "none";
 
       try {
@@ -72,14 +81,17 @@
         statusEl.innerHTML =
           data.message + " — <strong>Resume ID: " + data.resume_id +
           "</strong> (copy this to link your analysis/match to this resume)";
+
         outputEl.textContent = data.resume_text;
         resultEl.style.display = "block";
 
       } catch (err) {
         statusEl.textContent = "Something went wrong. Is the server running?";
+      } finally {
+        submitBtn.disabled = false;
       }
     });
-  </script>
+</script>
 
 </body>
 </html>

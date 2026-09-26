@@ -26,7 +26,11 @@ app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 @app.on_event("startup")
 def on_startup():
     """Create database tables (if missing) when the app starts."""
-    init_db()
+    try:
+        init_db()
+    except Exception as e:
+        print(f"FATAL: could not connect to database on startup: {e}")
+        raise
 
 
 @app.get("/")
@@ -237,7 +241,14 @@ def improve_resume_endpoint(payload: ImprovementRequest):
     if not payload.original_text.strip():
         raise HTTPException(status_code=400, detail="Original text is missing.")
 
+    if len(payload.original_text) > 2000:
+        raise HTTPException(
+            status_code=400,
+            detail="Text is too long. Please limit to 2000 characters for a single section.",
+        )
+
     valid_types = {"summary", "project", "skills", "experience"}
+
     if payload.section_type.lower() not in valid_types:
         raise HTTPException(
             status_code=400,
@@ -254,7 +265,6 @@ def improve_resume_endpoint(payload: ImprovementRequest):
         raise HTTPException(status_code=502, detail=str(e))
 
     return result
-
 
 @app.get("/history-data")
 def history_data():
